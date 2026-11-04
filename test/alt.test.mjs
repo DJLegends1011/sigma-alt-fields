@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
-    FIELDS, fieldOf, readAlternates, activeIndex, pickAlternate, switchPatch, listPatch, namespaceFrom, nextTitle,
+    FIELDS, fieldOf, readAlternates, activeIndex, pickAlternate, switchPatch, listPatch, namespaceFrom, nextTitle, sameText, remapIndex,
 } from '../client/core/alt.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -87,6 +87,17 @@ test('fields resolve from keys, ST save keys, labels and loose names', () => {
     assert.deepEqual(namespaceFrom({}, { scenario: [] }), {}, 'an emptied list drops its key');
 });
 
+test('text compares fold line endings; open editors follow their rows', () => {
+    assert.ok(sameText('a\r\nb ', 'a\nb'));
+    assert.ok(!sameText('a\nb', 'a\nc'));
+    // up on row 2: rows 1 and 2 swap, others stay
+    assert.deepEqual([0, 1, 2, 3].map(at => remapIndex('up', 2, at)), [0, 2, 1, 3]);
+    // copy of row 1 lands at 2: rows after 1 shift down
+    assert.deepEqual([0, 1, 2, 3].map(at => remapIndex('copy', 1, at)), [0, 1, 3, 4]);
+    // delete row 1: it closes, rows after shift up
+    assert.deepEqual([0, 1, 2, 3].map(at => remapIndex('delete', 1, at)), [0, -1, 1, 2]);
+});
+
 // ---------- in Σ: import keeps the data, the tab renders, the command switches ----------
 const kitPath = [path.resolve(extDir, '../../../../ProjectSigma-main/tools/extension-kit/index.mjs'),
     path.resolve(extDir, '../../../../../ProjectSigma-main/tools/extension-kit/index.mjs'),
@@ -137,7 +148,19 @@ test('in Σ: an ST card keeps its alternates, the tab paints them, alt-fields.us
         toggle('scenario');
         assert.ok(!isOpen('description') && isOpen('scenario'));
 
+        // a CRLF card with the Edit tab's box loaded: the textarea holds LF, the switch must still reach it
+        await api(`/characters/${char.id}`, 'PATCH', { fields: { scenario: 'Tavern at night.\r\nRain.' } });
+        await fetchChar(char.id);
+        const box = page.dom.createElement('textarea');
+        box.id = 'editScenario';
+        box.value = 'Tavern at night.\nRain.';
+        page.document.body.appendChild(box);
+        const toastsBefore = (page.log.toasts || []).length;
+
         const res = await page.registry.runCommand('alt-fields.use', { charId: char.id, field: 'scenario', name: 'Dungeon' });
+        assert.equal(box.value, 'Chained in the deep cells.', 'the Edit box follows the switch on a CRLF card');
+        assert.ok(!(page.log.toasts || []).slice(toastsBefore).some(([m]) => /unsaved/.test(m)), 'no false "unsaved Edit text" warning');
+        assert.equal(res.kept, true, 'the unsaved CRLF text was kept as an alternate');
         assert.equal(res.title, 'Dungeon');
         const after_ = await api(`/characters/${char.id}`);
         assert.equal((after_.card?.data || after_.data).scenario, 'Chained in the deep cells.');
@@ -145,6 +168,24 @@ test('in Σ: an ST card keeps its alternates, the tab paints them, alt-fields.us
 
         const list = await page.registry.runCommand('alt-fields.list', { charId: char.id });
         assert.equal(list.scenario.live, 2);
+        assert.equal(list.scenario.alternates.length, 4);
+
+        // a click while a save is in flight waits its turn instead of being dropped
+        await new Promise(r => setTimeout(r, 100));
+        toggle('scenario'); toggle('scenario');
+        if (!isOpen('scenario')) toggle('scenario');
+        const titleBox = pane.querySelector('[data-field="scenario"] [data-index="0"] [data-act="title"]');
+        titleBox.value = 'Tavern';
+        titleBox.dispatchEvent({ type: 'change', bubbles: true });
+        pane.querySelector('[data-field="scenario"] [data-index="1"] [data-act="use"]').click();
+        for (let i = 0; i < 150; i++) {
+            const c = await api(`/characters/${char.id}`);
+            if ((c.card.data.scenario === 'Aboard the Gull, storm rising.') && c.card.data.extensions.alternate_fields.alt_scenarios[0].title === 'Tavern') break;
+            await new Promise(r => setTimeout(r, 20));
+        }
+        const done = (await api(`/characters/${char.id}`)).card.data;
+        assert.equal(done.extensions.alternate_fields.alt_scenarios[0].title, 'Tavern', 'the rename saved');
+        assert.equal(done.scenario, 'Aboard the Gull, storm rising.', 'the Use clicked during the rename still ran');
         assert.equal(list.description.live, 0);
     } finally {
         page?.close();

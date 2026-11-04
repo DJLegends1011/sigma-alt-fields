@@ -2,7 +2,7 @@
 // commands and the settings switches. Every write goes through the app's own character.update, so
 // the change feed, the details pane and other tabs see it like any edit.
 import {
-    FIELDS, fieldOf, readAlternates, activeIndex, nextTitle, pickAlternate, approxTokens, switchPatch, listPatch,
+    FIELDS, fieldOf, readAlternates, activeIndex, nextTitle, pickAlternate, approxTokens, switchPatch, listPatch, sameText, remapIndex,
 } from './core/alt.js';
 
 
@@ -41,10 +41,12 @@ export default {
                 const shown = document.getElementById(field.shownId);
                 if (shown && CoreAPI.safePurify && CoreAPI.formatRichText) shown.innerHTML = CoreAPI.safePurify(CoreAPI.formatRichText(now, dataOf(char).name));
             }
+            // compared as text: a textarea hands back CRLF as LF, so a raw compare calls a CRLF card's untouched box "typed in",
+            // leaves the old text there, and the Edit tab's next Save writes it back over the switch
             const box = document.getElementById(field.editId);
-            if (box && box.value !== now) {
-                if (box.value === was) box.value = now;
-                else CoreAPI.showToast(`The Edit tab holds unsaved ${field.label} text: re-open the card before saving it`, 'warning');
+            if (box && !sameText(box.value, now)) {
+                if (sameText(box.value, was)) box.value = now;
+                else CoreAPI.showToast(`The Edit tab holds unsaved ${field.label} text: re-open the card before saving it, or it will undo this switch`, 'warning', 8000);
             }
         }
 
@@ -71,7 +73,7 @@ export default {
             let char = null;
             let open = new Set();       // fields whose drawer is open
             let editing = new Set();    // "field:index" content drawers open
-            let busy = false;
+            let busy = 0;          // actions queued or running
             let seeded = false;
 
             async function reload() {
@@ -146,19 +148,35 @@ export default {
 
             function autosize(t) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 420) + 'px'; }
 
-            async function act(fn, okMsg) {
-                if (busy) return;
-                busy = true;
-                try {
-                    const msg = await fn();
-                    if (msg || okMsg) CoreAPI.showToast(msg || okMsg, 'success');
-                } catch (e) {
-                    console.error('[alt-fields]', e);
-                    CoreAPI.showToast(`Alt Fields: ${e?.message || e}`, 'error');
-                } finally {
-                    busy = false;
-                    await reload();
+            // actions run one after another: a click that lands while a save is in flight (edit a name, then press Use,
+            // where the box's blur saves first) waits its turn instead of being dropped
+            let queue = Promise.resolve();
+            function act(fn, okMsg) {
+                busy++;
+                queue = queue.then(async () => {
+                    try {
+                        const msg = await fn();
+                        if (msg || okMsg) CoreAPI.showToast(msg || okMsg, 'success');
+                    } catch (e) {
+                        console.error('[alt-fields]', e);
+                        CoreAPI.showToast(`Alt Fields: ${e?.message || e}`, 'error');
+                    } finally {
+                        busy--;
+                        if (!busy) await reload();
+                    }
+                });
+                return queue;
+            }
+
+            function moveEditors(fieldKey, op, i) {
+                const next = new Set();
+                for (const k of editing) {
+                    const [f, at] = k.split(':');
+                    if (f !== fieldKey) { next.add(k); continue; }
+                    const to = remapIndex(op, i, Number(at));
+                    if (to >= 0) next.add(`${f}:${to}`);
                 }
+                editing = next;
             }
 
             async function saveList(fieldKey, mutate) {
@@ -198,10 +216,18 @@ export default {
                         }));
                         break;
                     case 'copy':
-                        act(() => saveList(fieldKey, (list) => list.splice(i + 1, 0, { title: `${list[i].title} (copy)`, content: list[i].content })));
+                        act(() => saveList(fieldKey, (list) => {
+                            if (!list[i]) return;
+                            list.splice(i + 1, 0, { title: `${list[i].title} (copy)`, content: list[i].content });
+                            moveEditors(fieldKey, 'copy', i);
+                        }));
                         break;
                     case 'up':
-                        act(() => saveList(fieldKey, (list) => { if (i > 0) [list[i - 1], list[i]] = [list[i], list[i - 1]]; }));
+                        act(() => saveList(fieldKey, (list) => {
+                            if (i <= 0 || !list[i]) return;
+                            [list[i - 1], list[i]] = [list[i], list[i - 1]];
+                            moveEditors(fieldKey, 'up', i);
+                        }));
                         break;
                     case 'delete':
                         act(async () => {
@@ -209,8 +235,7 @@ export default {
                             const title = readAlternates(fresh).lists[fieldKey][i]?.title || 'this alternate';
                             const yes = await CoreAPI.showConfirm?.({ title: 'Delete alternate', message: `Delete "${title}"? The live ${field.label} is not changed.`, confirmLabel: 'Delete', danger: true });
                             if (!yes) return '';
-                            editing.clear();
-                            await saveList(fieldKey, (list) => list.splice(i, 1));
+                            await saveList(fieldKey, (list) => { list.splice(i, 1); moveEditors(fieldKey, 'delete', i); });
                             return '';
                         });
                         break;
@@ -245,7 +270,7 @@ export default {
             });
 
             // one listener for every open tab (ctx.events.on has no off): a tab registers here, a detached one is dropped
-            mounts.add({ root, id: character.id, quiet: () => busy, reload });
+            mounts.add({ root, id: character.id, quiet: () => busy > 0, reload });
 
             root.innerHTML = '<div class="altf-muted">Loading…</div>';
             reload();

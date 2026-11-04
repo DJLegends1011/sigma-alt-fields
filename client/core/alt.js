@@ -69,7 +69,18 @@ export function namespaceFrom(data, lists) {
     return out;
 }
 
-const norm = (s) => String(s ?? '').replace(/\r\n/g, '\n').trim();
+const norm = (s) => String(s ?? '').replace(/\r\n?/g, '\n').trim();
+
+/** Same text as a reader sees it: line endings folded (a textarea turns CRLF into LF) and ends trimmed. */
+export function sameText(a, b) { return norm(a) === norm(b); }
+
+/** Where each open editor's row lands after a list edit: up swaps i with i-1, copy shifts rows after i, delete drops i. */
+export function remapIndex(op, i, at) {
+    if (op === 'up') return at === i ? i - 1 : at === i - 1 ? i : at;
+    if (op === 'copy') return at > i ? at + 1 : at;
+    if (op === 'delete') return at === i ? -1 : at > i ? at - 1 : at;
+    return at;
+}
 
 /** The index of the alternate the live field holds (compared trimmed, CRLF folded), or -1. */
 export function activeIndex(list, live) {
