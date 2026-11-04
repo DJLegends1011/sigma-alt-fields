@@ -49,5 +49,9 @@ Bots often ship one scenario and many greetings, where each greeting implies a d
   the built prompt. Two chats on the same bot can then run different scenarios at once, and the card stays untouched.
 - Per-chat override: pin an alternate for one chat from a chat action, stored in an `x_alt_fields_chat` table.
 - The Prompt Inspector shows the swapped text since it reads the same pipeline.
+- **Linked sets across fields.** Real cards pair alternates across fields: Petra (JanitorAI port) has a Description
+  and a Scenario per universe (Earth-T31867 / Earth-1049), and switching one without the other mixes canon. v0.2
+  should let alternates form a named set ("Earth-1049" = description + scenario) that switches together, and link
+  greetings to the set rather than to a single field.
 - Open question: how {{scenario}} macros inside presets resolve — the swap must happen where the card fields are read
   for the prompt, not only on the final message list.
