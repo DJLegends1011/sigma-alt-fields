@@ -1,0 +1,40 @@
+.altf-root, .altf-root * { box-sizing: border-box; min-width: 0; }
+.altf-root { display: flex; flex-direction: column; gap: 10px; padding: 4px 2px 12px; }
+.altf-muted { color: var(--text-secondary, rgba(255,255,255,.6)); font-size: .85em; }
+.altf-intro { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px;
+    background: rgba(255,255,255,.025); border: 1px solid var(--border-subtle, rgba(255,255,255,.08)); overflow-wrap: anywhere; }
+.altf-intro > i { color: var(--accent, #8ab4ff); margin-top: 3px; }
+.altf-field { border-radius: 12px; background: rgba(255,255,255,.025); border: 1px solid var(--border-subtle, rgba(255,255,255,.08)); overflow: hidden; }
+.altf-head { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; cursor: pointer; flex-wrap: wrap; }
+.altf-head:hover { background: rgba(255,255,255,.03); }
+.altf-ficon { width: 18px; text-align: center; opacity: .8; }
+.altf-flabel { font-weight: 600; }
+.altf-pill { font-size: .75em; padding: 1px 8px; border-radius: 999px; background: rgba(255,255,255,.08); }
+.altf-live { margin-left: auto; font-size: .8em; color: var(--text-secondary, rgba(255,255,255,.65)); overflow-wrap: anywhere; }
+.altf-live .fa-circle-check { color: var(--accent, #8ab4ff); }
+.altf-live .fa-triangle-exclamation { color: #e6b450; }
+.altf-chev { transition: transform .15s; opacity: .6; }
+.altf-field.open .altf-chev { transform: rotate(180deg); }
+.altf-body { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
+.altf-none { padding: 4px 2px; }
+.altf-alt { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 10px; border: 1px solid transparent; background: rgba(0,0,0,.12); }
+.altf-alt.live { border-color: color-mix(in srgb, var(--accent, #8ab4ff) 45%, transparent); }
+.altf-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.altf-root .altf-title { flex: 1 1 160px; padding: 6px 10px !important; min-height: 0; }
+.altf-tok { font-size: .75em; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.06); white-space: nowrap; }
+.altf-badge { font-size: .8em; padding: 4px 10px; border-radius: 8px; color: var(--accent, #8ab4ff); white-space: nowrap; }
+.altf-btn, .altf-icon { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border-radius: 8px; border: 1px solid var(--border-subtle, rgba(255,255,255,.1)); background: rgba(255,255,255,.04); font-size: .85em; }
+.altf-btn { padding: 5px 10px; white-space: nowrap; }
+.altf-icon { width: 30px; height: 30px; }
+.altf-btn:hover:not([disabled]), .altf-icon:hover:not([disabled]) { background: rgba(255,255,255,.09); }
+.altf-btn.primary { background: color-mix(in srgb, var(--accent, #8ab4ff) 22%, transparent); }
+.altf-icon.danger:hover:not([disabled]) { color: #ff7b7b; }
+.altf-btn[disabled], .altf-icon[disabled] { opacity: .35; cursor: default; }
+.altf-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.altf-root .altf-text { width: 100%; resize: vertical; min-height: 80px; font-family: inherit; overflow-wrap: anywhere; }
+.altf-hint { padding: 0 2px; }
+@media (max-width: 520px) {
+    .altf-live { margin-left: 0; flex-basis: 100%; }
+    .altf-root .altf-title { flex-basis: 100%; }
+}

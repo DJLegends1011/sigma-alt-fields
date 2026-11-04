@@ -1,0 +1,19 @@
+{
+    "id": "alt-fields",
+    "name": "Alt Fields",
+    "version": "0.1.0",
+    "author": "DJLegends",
+    "description": "Keep several versions of a character's Description, Personality, Scenario, Example Dialogue, Main Prompt and Post-History Instructions on the card and switch the live one. Reads and writes SillyTavern Alternate Fields' card data (extensions.alternate_fields), so migrated cards bring their alternates along.",
+    "requires": {
+        "api": "2.6"
+    },
+    "settings": {
+        "snapshotOnSwitch": true,
+        "keepUnsaved": true
+    },
+    "contributes": [
+        "character.details.tab"
+    ],
+    "client": "client/index.js",
+    "style": "client/style.css"
+}
