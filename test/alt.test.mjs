@@ -126,6 +126,17 @@ test('in Σ: an ST card keeps its alternates, the tab paints them, alt-fields.us
         assert.match(pane.innerHTML, /Dungeon/);
         assert.match(pane.innerHTML, /Scenario #1/);
 
+        // closing every open field keeps them closed (a redraw must not re-open fields with alternates)
+        const isOpen = (k) => new RegExp(`altf-field open" data-field="${k}"`).test(pane.innerHTML);
+        assert.ok(isOpen('description') && isOpen('scenario'));
+        const toggle = (k) => pane.querySelector(`[data-field="${k}"] [data-act="toggle"]`).click();
+        toggle('description');
+        assert.ok(!isOpen('description') && isOpen('scenario'));
+        toggle('scenario');
+        assert.ok(!isOpen('description') && !isOpen('scenario'), 'closing the last open field opens nothing else');
+        toggle('scenario');
+        assert.ok(!isOpen('description') && isOpen('scenario'));
+
         const res = await page.registry.runCommand('alt-fields.use', { charId: char.id, field: 'scenario', name: 'Dungeon' });
         assert.equal(res.title, 'Dungeon');
         const after_ = await api(`/characters/${char.id}`);

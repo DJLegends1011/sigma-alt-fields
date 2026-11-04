@@ -72,6 +72,7 @@ export default {
             let open = new Set();       // fields whose drawer is open
             let editing = new Set();    // "field:index" content drawers open
             let busy = false;
+            let seeded = false;
 
             async function reload() {
                 char = await loadChar(character.id);
@@ -83,7 +84,8 @@ export default {
                 const data = dataOf(char);
                 const { lists, legacy } = readAlternates(data);
                 const total = FIELDS.reduce((n, f) => n + lists[f.key].length, 0);
-                if (!open.size) for (const f of FIELDS) if (lists[f.key].length) open.add(f.key);
+                // fields with alternates start open, once: after that only the reader's toggles count
+                if (!seeded) { seeded = true; for (const f of FIELDS) if (lists[f.key].length) open.add(f.key); }
                 root.innerHTML = `
                     <div class="altf-intro">
                         <i class="fa-solid fa-code-branch"></i>
