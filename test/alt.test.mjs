@@ -99,9 +99,9 @@ test('text compares fold line endings; open editors follow their rows', () => {
 });
 
 // ---------- in Σ: import keeps the data, the tab renders, the command switches ----------
-const kitPath = [path.resolve(extDir, '../../../../ProjectSigma-main/tools/extension-kit/index.mjs'),
-    path.resolve(extDir, '../../../../../ProjectSigma-main/tools/extension-kit/index.mjs'),
-    process.env.SIGMA_DIR && path.join(process.env.SIGMA_DIR, 'tools/extension-kit/index.mjs')].filter(Boolean).find(p => fs.existsSync(p));
+const kitPath = [process.env.SIGMA_DIR && path.join(process.env.SIGMA_DIR, 'tools/extension-kit/index.mjs'),
+    path.resolve(extDir, '../../../../ProjectSigma-main/tools/extension-kit/index.mjs'),
+    path.resolve(extDir, '../../../../../ProjectSigma-main/tools/extension-kit/index.mjs')].filter(Boolean).find(p => fs.existsSync(p));
 
 test('in Σ: an ST card keeps its alternates, the tab paints them, alt-fields.use switches the field', { skip: !kitPath && 'no Σ checkout' }, async () => {
     const { startSigma } = await import(pathToFileURL(kitPath).href);
