@@ -328,11 +328,5 @@ export default {
                 alternates: lists[f.key].map(a => ({ title: a.title, tokens: approxTokens(a.content) })),
             }]));
         }, { title: 'List a character\'s field alternates' });
-
-        window.__SIGMA_ALT_FIELDS__ = { version: '0.1.0', fields: FIELDS.map(f => f.key) };
-    },
-
-    dispose() {
-        delete window.__SIGMA_ALT_FIELDS__;
     },
 };
